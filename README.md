@@ -23,5 +23,15 @@ This is a very basic implementation to understand the principles. There is no fa
    A succesful response will look like this:
 
    200 OK - "DPoP proof seems legit"
+
+1. To test a failed DPoP test you can use the following GET request:
+   
+   `GET https://localhost:7261/Resource/invalid`
+
+   This will respond with the following:
+
+   200 OK - "Access Token thumbprint invalid"
+
+   This happens because the _invalid_ endpoint instantiates a new RSA for creating the DPoP proof JWT. This results in the public key thumbprint  on the access token not matching that of the DPoP Proof JWT
   
 There is also a Nunit test project that ended up containing the shared Token implementations. It showcases some of my failed attempts at using BouncyCastle to make use of the EdDSA algorithm instead of PS RSA.
