@@ -1,0 +1,6 @@
+@DpopTrial_HostAddress = http://localhost:5278
+
+GET {{DpopTrial_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
