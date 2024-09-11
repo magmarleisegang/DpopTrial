@@ -1,7 +1,9 @@
 # DpopTrial
 Trial implementation of DPoP auth. Very basic. 
-Follows the explanation here: https://darutk.medium.com/illustrated-dpop-oauth-access-token-security-enhancement-801680d761ff
-Info on building JWT from jwt.io
+
+Follows the explanation here: [Illustrated DPoP (OAuth Access Token Security Enhancement)](https://darutk.medium.com/illustrated-dpop-oauth-access-token-security-enhancement-801680d761ff)
+
+Info on building JWT here: [jwt.io](https://jwt.io/introduction)
 
 ## The project contains two APIs:
 1. DPoP Trial: this is the API that hands out access tokens and special resources
