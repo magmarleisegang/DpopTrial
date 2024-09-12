@@ -1,3 +1,4 @@
+using DpopTokens;
 using TestProject;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,7 +12,7 @@ builder.Services.AddControllers();
 builder.Services.AddHttpClient("default", (service) => {
     service.BaseAddress = new Uri("https://localhost:7292");
 });
-builder.Services.AddSingleton<TokenWorker>();
+builder.Services.AddSingleton<DPopTokenGenerator>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

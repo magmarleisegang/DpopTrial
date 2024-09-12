@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+﻿using DpopTokens;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Logging;
@@ -22,29 +23,25 @@ namespace DpopTrial.Controllers
              */
             if (Request.Headers.TryGetValue("DPOP", out var dpopToken))
             {
+                var TokenWorks = new DPoPTokenValidator();
+
                 var isValidDpopToken = TokenWorks.ValidateDpopTokenSignature(dpopToken.ToString(), out var thumbprint);
                 if (isValidDpopToken)
                 {
                     IdentityModelEventSource.ShowPII = true;
-                    var jwtHandler = new JsonWebTokenHandler();
+
                     var tokenValue = Request.Headers.Authorization.ToString().Replace("dpop ", string.Empty, StringComparison.OrdinalIgnoreCase);
-                    if (jwtHandler.CanReadToken(tokenValue))
+                    var validPubKey = TokenWorks.ValidateDPoPPublicKey(tokenValue, thumbprint);
+
+                    if (validPubKey)
                     {
-                        var to = (JsonWebToken)jwtHandler.ReadToken(tokenValue);
-                        if (to.TryGetClaim("cnf", out Claim claim))
-                        {
-                            var cnf = JsonSerializer.Deserialize<Jkt>(claim.Value);
-                            var pubkeyThumbprint = Base64UrlEncoder.Encode(thumbprint);
-                            if (cnf.jkt.Equals(pubkeyThumbprint))
-                            {
-                                return Ok("DPoP proof seems legit");
-                            }
-                            else
-                            {
-                                return Unauthorized("Access Token thumbprint invalid");
-                            }
-                        }
+                        return Ok("DPoP proof seems legit");
                     }
+                    else
+                    {
+                        return Unauthorized("Access Token thumbprint invalid");
+                    }
+
                 }
             }
 

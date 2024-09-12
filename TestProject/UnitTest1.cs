@@ -1,3 +1,5 @@
+using DpopTokens;
+using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -6,40 +8,66 @@ using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Security;
 using ScottBrady.IdentityModel.Crypto;
 using ScottBrady.IdentityModel.Tokens;
-using System.Buffers.Text;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Unicode;
 
 namespace TestProject
 {
     public class Tests
     {
+        private DPopTokenGenerator tokenGenerator;
+        private DPoPTokenValidator tokenValidator;
+
+
 
         [SetUp]
         public void Setup()
         {
+            tokenGenerator = new DPopTokenGenerator();
+            tokenValidator = new DPoPTokenValidator();
         }
 
         [Test]
-        public void GenerateToken()
+        public void GenerateThenValidateToken_ShouldPass()
         {
-            RSA rsa = RSA.Create();
-            var pkParams = rsa.ExportParameters(false);
-            //Save the public key information to an RSAParameters structure.  
-            var tokenHandler = new JsonWebTokenHandler();
-            var dpopjwt = TokenWorks.GenerateDpopToken(rsa);
+            var requestUri = "/my/test/request";
+            var requestMethod = "TEST";
+            var dpopjwt = tokenGenerator.GenerateDpopProofToken(requestUri, requestMethod);
 
             //validate using public key 
 
-            Assert.That(TokenWorks.ValidateDpopTokenSignature(dpopjwt, out var _), Is.True);
+            Assert.That(tokenValidator.ValidateDpopTokenSignature(dpopjwt, out var _), Is.True);
         }
 
         [Test]
-        public void GEnerateToken2()
+        public void SerializationTests()
+        {
+            var serializeOptions = new JsonSerializerOptions();
+            serializeOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault;
+            
+            var rsajwkSerialized = JsonSerializer.Serialize(new DPoPJwk("kty", "modulus", "exponent"), serializeOptions);
+            var rsajwkDeserialized = JsonSerializer.Deserialize<DPoPJwk>(rsajwkSerialized);
+
+            var headerSerialized = JsonSerializer.Serialize<object>(new DPoPTokenHeader("alg", new DPoPJwk("kty", "modulus", "exponent")), serializeOptions);
+            var headerDeserialized = JsonSerializer.Deserialize<DPoPTokenHeader>(headerSerialized);
+        }
+
+        [Test]
+        public void GenerateThenValidateTokenDetails_ShouldPass()
+        {
+            var requestUri = "/my/test/request";
+            var requestMethod = "TEST";
+            var dpopjwt = tokenGenerator.GenerateDpopProofToken(requestUri, requestMethod);
+
+            //validate using public key 
+            HttpRequest request = new TestHttpRequest(requestMethod, requestUri);
+            Assert.That(tokenValidator.ValidateDPoPTokenDetail(dpopjwt, request), Is.True);
+        }
+
+        [Test]
+        public void GenerateToken2_ECDSAAttempt()
         {
             IdentityModelEventSource.ShowPII = true;
             var edsaKey = new ECDsaSecurityKey(ECDsa.Create());
@@ -78,7 +106,7 @@ namespace TestProject
 
 
         [Test]
-        public async Task Generate3()
+        public async Task Generate3_EdDSAAttempt()
         {
             var options = new SampleOptions();
             var handler = new JsonWebTokenHandler();

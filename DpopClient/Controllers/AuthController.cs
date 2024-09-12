@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using DpopTokens;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -10,7 +11,7 @@ namespace DpopClient.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class AuthController(IHttpClientFactory httpClientFactory, TokenWorker tokenWorker) : Controller
+    public class AuthController(IHttpClientFactory httpClientFactory, DPopTokenGenerator tokenWorker) : Controller
     {
         [HttpGet]
         public async Task<IActionResult> Index()
@@ -26,10 +27,11 @@ namespace DpopClient.Controllers
             //1.
             //Generate a public/private key pair.  
             //var tokenHandler = new JsonWebTokenHandler();
-            var token = tokenWorker.GenerateDpopProofToken();
+
 
             using var client = httpClientFactory.CreateClient("default");
-
+            var reqPath = $"{client.BaseAddress}token";
+            var token = tokenWorker.GenerateDpopProofToken(reqPath, "POST");
             // call other API
             client.DefaultRequestHeaders.Add("DPOP", token);
             var response = await client.PostAsync("token", new StringContent("hallo"));

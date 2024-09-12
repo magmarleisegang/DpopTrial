@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using DpopTokens;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using System.Text.Json;
@@ -20,12 +21,13 @@ public class TokenController : ControllerBase
          * 4. bind pub key to access token -> BindPubKeyToAccessToken
          * 5. respond with access token
          */
-
+        var TokenWorks = new DPoPTokenValidator();
         //1,2. Extract and Verify DPoP token 
         if (Request.Headers.TryGetValue("DPOP", out var dpopToken))
         {
             var isValidDpopToken = TokenWorks.ValidateDpopTokenSignature(dpopToken.ToString(), out var thumbprint);
-            if (isValidDpopToken)
+            var isValidDpopDetails = isValidDpopToken && TokenWorks.ValidateDPoPTokenDetail(dpopToken.ToString(), HttpContext.Request);
+            if (isValidDpopToken && isValidDpopDetails)
             {
                 var data = await GetRequestText(HttpContext);
 
@@ -38,10 +40,12 @@ public class TokenController : ControllerBase
 
                 };
 
-                BindPubKeyToAccessToken(token, thumbprint);
+                TokenWorks.BindPubKeyToAccessToken(token, thumbprint);
 
                 return Ok(jwtHandler.CreateToken(token));
             }
+
+            return Unauthorized(!isValidDpopToken ? "Invalid DPoP" : isValidDpopDetails ? "Invalid DPoP details" : "");
         }
 
         return Unauthorized();
@@ -55,9 +59,5 @@ public class TokenController : ControllerBase
         context.Request.Body.Seek(0, SeekOrigin.Begin);
         return requestText;
     }
-    private void BindPubKeyToAccessToken(SecurityTokenDescriptor token, string pubkey)
-    {
-        var pubkeyThumbprint = Base64UrlEncoder.Encode(pubkey); //JWK SHA-256 Thumbprint
-        token.Claims.Add("cnf", JsonSerializer.Serialize(new Jkt { jkt = pubkeyThumbprint }));
-    }
+   
 }

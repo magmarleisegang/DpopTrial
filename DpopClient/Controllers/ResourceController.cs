@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using DpopTokens;
+using Microsoft.AspNetCore.Mvc;
 using System.Security.Cryptography;
 using TestProject;
 
@@ -6,7 +7,7 @@ namespace DpopClient.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class ResourceController(IHttpClientFactory httpClientFactory, TokenWorker tokenWorker) : Controller
+    public class ResourceController(IHttpClientFactory httpClientFactory, DPopTokenGenerator tokenWorker) : Controller
     {
         public async Task<IActionResult> Index()
         {
@@ -16,10 +17,11 @@ namespace DpopClient.Controllers
              * pack into jwt and send to server along with access token
             
              */
-            var token = tokenWorker.GenerateDpopProofToken();
 
             using var client = httpClientFactory.CreateClient("default");
+            var reqPath = $"{client.BaseAddress}resource";
             // call other API
+            var token = tokenWorker.GenerateDpopProofToken(reqPath, "POST");
             client.DefaultRequestHeaders.Add("DPOP", token);
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("DPoP", tokenWorker.AccessToken);
             var response = await client.PostAsync("resource", new StringContent("hallo"));
@@ -36,11 +38,13 @@ namespace DpopClient.Controllers
              * pack into jwt and send to server along with access token
             
              */
-            RSA rsa = RSA.Create();
+            var TokenWorks = new DPopTokenGenerator();
 
-            var token = TokenWorks.GenerateDpopToken(rsa);
 
             using var client = httpClientFactory.CreateClient("default");
+            var reqPath = $"{client.BaseAddress}/resource";
+
+            var token = TokenWorks.GenerateDpopProofToken(reqPath, "POST");
             // call other API
             client.DefaultRequestHeaders.Add("DPOP", token);
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("DPoP", tokenWorker.AccessToken);

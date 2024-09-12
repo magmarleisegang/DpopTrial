@@ -1,11 +1,8 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.IdentityModel.Tokens;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace TestProject;
 
@@ -24,26 +21,22 @@ public static class TokenWorks
 
         var jsonWebKey = JsonWebKeyConverter.ConvertFromSecurityKey(rsaKey);
 
-        var jwk = new
-        {
-            kty = jsonWebKey.Kty,
-            n = Convert.ToBase64String(rsaParameters.Modulus!),
-            e = jsonWebKey.E
-        };
+        var jwk = new RSAJwk(
+            kty: jsonWebKey.Kty,
+            Modulus: Convert.ToBase64String(rsaParameters.Modulus!),
+            Exponent: jsonWebKey.E
+        );
 
-        var dpopjwtheader = new
-        {
-            typ = DpopTokenType,
-            alg = "PS256",
+        var dpopjwtheader = new DPoPTokenHeader(
+            KeyAlgorithm: "PS256",
             jwk
-        };
-        var dpopjwtpayload = new
-        {
-            jti = Guid.NewGuid().ToString(),
-            htm = "POST",
-            htu = "https://localhost:7292/token",
-            iat = DateTime.Now.Ticks,
-        };
+        );
+
+        var dpopjwtpayload = new DPoPPayload(
+            Guid.NewGuid(),
+            "POST",
+            "https://localhost:7292/token",
+            DateTimeOffset.Now);
 
         var h1 = Base64Encode(dpopjwtheader);
         var p1 = Base64Encode(dpopjwtpayload);
@@ -57,6 +50,7 @@ public static class TokenWorks
         SignatureEncoded = Base64UrlEncoder.Encode(signature);
         return $"{tokendata}.{SignatureEncoded}";
     }
+
     public static string Base64Encode(object thing)
     {
         var plainText = JsonSerializer.Serialize(thing);
@@ -73,7 +67,7 @@ public static class TokenWorks
         var payload64 = bits[1];
         var signature64 = bits[2];
 
-        var header = Base64Decode<DpopHeader>(header64);
+        var header = Base64Decode<DPoPTokenHeader>(header64);
 
         var exponent = Base64UrlEncoder.DecodeBytes(header.jwk.e);
         var modulus = Convert.FromBase64String(header.jwk.n);
@@ -90,11 +84,19 @@ public static class TokenWorks
         var sigBytes = Base64UrlEncoder.DecodeBytes(signature64);
 
         var valid = publicKey.VerifyData(dataBytes, sigBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pss);
-        if(valid)
+        if (valid)
         {
             pubKeyPrint = publicKey.ExportRSAPublicKeyPem();
         }
         return valid;
+    }
+
+    public static bool ValidateDPoPTokenDetail(string dpopjwt, HttpRequest request)
+    {
+        var bits = dpopjwt.Split('.');
+        var payload64 = bits[1];
+        var payload = Base64Decode<DPoPPayload>(payload64);
+        return payload.IntendedUri == request.Path && payload.HttpMethod == request.Method;
     }
 
     public static T Base64Decode<T>(string thing64)
@@ -104,18 +106,6 @@ public static class TokenWorks
         return _daata;
     }
 
-    public class DpopHeader
-    {
-        public string typ { get; set; }
-        public string alg { get; set; }
-        public Jwk jwk { get; set; }
 
-    }
-    public class Jwk
-    {
-        public string kty { get; set; }
-        public string n { get; set; }
-        public string e { get; set; }
-    }
 }
 
