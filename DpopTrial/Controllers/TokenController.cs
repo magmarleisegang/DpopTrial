@@ -1,7 +1,9 @@
 ﻿using DpopTokens;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using System.Text.Json;
 using TestProject;
 
@@ -9,6 +11,8 @@ namespace DpopTrial.Controllers;
 
 [ApiController]
 [Route("[controller]")]
+[AllowAnonymous]
+//[Authorize(AuthenticationSchemes = "DPoPProof")]
 public class TokenController : ControllerBase
 {
     [HttpPost]
@@ -36,7 +40,9 @@ public class TokenController : ControllerBase
                 {
                     TokenType = "DPoP",
                     Audience = Request.Host.ToString(),
-                    Claims = new Dictionary<string, object>() { { "resource-get", "bob" } }
+                    Claims = new Dictionary<string, object>() { { "resource-get", "bob" },
+                        { ClaimsIdentity.DefaultNameClaimType, "bob"}
+                }
 
                 };
 
@@ -59,5 +65,5 @@ public class TokenController : ControllerBase
         context.Request.Body.Seek(0, SeekOrigin.Begin);
         return requestText;
     }
-   
+
 }

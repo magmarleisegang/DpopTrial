@@ -1,4 +1,5 @@
 ﻿using DpopTokens;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -12,6 +13,8 @@ namespace DpopTrial.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize(AuthenticationSchemes = "DPoPProof")]
+
     public class ResourceController : Controller
     {
         public IActionResult Index()
@@ -20,15 +23,13 @@ namespace DpopTrial.Controllers
              * 1. verify dpop jwt signature with dpop included pub key
              * 2. verify pub key matches access token pub key
              * 3. respond if true
-             */
             if (Request.Headers.TryGetValue("DPOP", out var dpopToken))
             {
                 var TokenWorks = new DPoPTokenValidator();
 
-                var isValidDpopToken = TokenWorks.ValidateDpopTokenSignature(dpopToken.ToString(), out var thumbprint);
-                if (isValidDpopToken)
+                var isValidDpopProofToken = TokenWorks.ValidateDpopTokenSignature(dpopToken.ToString(), out var thumbprint);
+                if (isValidDpopProofToken)
                 {
-                    IdentityModelEventSource.ShowPII = true;
 
                     var tokenValue = Request.Headers.Authorization.ToString().Replace("dpop ", string.Empty, StringComparison.OrdinalIgnoreCase);
                     var validPubKey = TokenWorks.ValidateDPoPPublicKey(tokenValue, thumbprint);
@@ -36,17 +37,8 @@ namespace DpopTrial.Controllers
                     if (validPubKey)
                     {
                         return Ok("DPoP proof seems legit");
-                    }
-                    else
-                    {
-                        return Unauthorized("Access Token thumbprint invalid");
-                    }
-
-                }
-            }
-
-
-            return Unauthorized();
+             */
+            return Ok("I love ponies!");
         }
     }
 }
